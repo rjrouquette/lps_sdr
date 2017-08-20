@@ -1,0 +1,13 @@
+# Jetbrains IDE Files
+.idea/
+*.iml
+cmake-build-debug/
+
+# Build Files
+build/
+dist/
+*.bin
+
+# Core dumps
+core
+!/core

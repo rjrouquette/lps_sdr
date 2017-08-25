@@ -12,11 +12,11 @@
 #define CHANNEL_COUNT (80)
 #define DAC_MAX (511)
 #define DAC_OFF (512)
-#define DAC_HI ("1.8")
-#define DAC_LO ("0.0")
+#define DAC_COMP (1023)
+#define DAC_SCALE (2.0e-3 / 1024)
 #define DAC_SLEW (1e-9)
 
-std::ofstream dacOut[20];
+std::ofstream dacOut[2];
 int dacPrev;
 void dacInit();
 void dacOutput(double time, int value);
@@ -115,22 +115,13 @@ void initWindowTaper() {
 }
 
 void dacInit() {
-    char fname[64];
-    for(int i = 0; i < 20; i++) {
-        sprintf(fname, "/tmp/dacOutput%s%d.pwl", (i & 1) ? "Neg": "Pos", i >> 1);
-        dacOut[i].open(fname);
-        dacOut[i] << std::scientific << std::setprecision(6);
-    }
-    for(int i = 0; i < 18; i++) {
-        if(i & 1) {
-            dacOut[i] << "0\t" << DAC_HI << std::endl;
-        }
-        else {
-            dacOut[i] << "0\t" << DAC_LO << std::endl;
-        }
-    }
-    dacOut[18] << "0\t" << DAC_HI << std::endl;
-    dacOut[19] << "0\t" << DAC_LO << std::endl;
+    dacOut[0].open("/tmp/dacOutputPos.pwl");
+    dacOut[0] << std::scientific << std::setprecision(6);
+    dacOut[0] << "0\t" << DAC_OFF * DAC_SCALE << std::endl;
+
+    dacOut[1].open("/tmp/dacOutputNeg.pwl");
+    dacOut[1] << std::scientific << std::setprecision(6);
+    dacOut[0] << "0\t" << (DAC_COMP - DAC_OFF) * DAC_SCALE << std::endl;
 
     dacPrev = DAC_OFF;
 }
@@ -138,19 +129,11 @@ void dacInit() {
 void dacOutput(double time, int value) {
     value += DAC_OFF;
 
-    for(int i = 0; i < 10; i++) {
-        bool bit = (bool) ((dacPrev >> i) & 1);
+    dacOut[0] << (time - DAC_SLEW) << "\t" << dacPrev * DAC_SCALE << std::endl;
+    dacOut[1] << (time - DAC_SLEW) << "\t" << (DAC_COMP - dacPrev) * DAC_SCALE << std::endl;
 
-        dacOut[(i << 1) + 0] << (time - DAC_SLEW) << "\t" << (bit ? DAC_HI : DAC_LO) << std::endl;
-        dacOut[(i << 1) + 1] << (time - DAC_SLEW) << "\t" << (bit ? DAC_LO : DAC_HI) << std::endl;
-    }
-
-    for(int i = 0; i < 10; i++) {
-        bool bit = (bool) ((value >> i) & 1);
-
-        dacOut[(i << 1) + 0] << time << "\t" << (bit ? DAC_HI : DAC_LO) << std::endl;
-        dacOut[(i << 1) + 1] << time << "\t" << (bit ? DAC_LO : DAC_HI) << std::endl;
-    }
+    dacOut[0] << (time) << "\t" << value * DAC_SCALE << std::endl;
+    dacOut[1] << (time) << "\t" << (DAC_COMP - value) * DAC_SCALE << std::endl;
 
     dacPrev = value;
 }

@@ -117,7 +117,7 @@ void initWindowTaper() {
 void dacInit() {
     char fname[64];
     for(int i = 0; i < 20; i++) {
-        sprintf(fname, "dacOutput%s%d.pwl", (i & 1) ? "Neg": "Pos", i >> 1);
+        sprintf(fname, "/tmp/dacOutput%s%d.pwl", (i & 1) ? "Neg": "Pos", i >> 1);
         dacOut[i].open(fname);
         dacOut[i] << std::scientific << std::setprecision(6);
     }

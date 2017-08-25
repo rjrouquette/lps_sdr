@@ -10,12 +10,13 @@
 #define CHANNEL_OFFSET (641) // 640 - 16 MHz; 800 - 20Mhz
 #define CHANNEL_SPACING (2) // half-populated for better channel isolation
 #define CHANNEL_COUNT (80)
-#define DAC_MAX (127)
+#define DAC_MAX (511)
+#define DAC_OFF (512)
 #define DAC_HI ("1.8")
 #define DAC_LO ("0.0")
 #define DAC_SLEW (1e-9)
 
-std::ofstream dacOut[16];
+std::ofstream dacOut[20];
 int dacPrev;
 void dacInit();
 void dacOutput(double time, int value);
@@ -60,10 +61,10 @@ int main() {
 
     double time = 1e-6;
     for(int i = 0; i < SYMBOL_LENGTH; i++) {
-        dacOutput(time, result[i] + 128);
+        dacOutput(time, result[i]);
         time += 1.0 / SAMPLE_RATE;
     }
-    dacOutput(time, 128);
+    dacOutput(time, 0);
 
     return 0;
 }
@@ -95,6 +96,7 @@ void modulator(int *out, bool *bits) {
             if(ifft_out[i] > max) max = ifft_out[i];
         }
     }
+    max -= (max / DAC_MAX) / 2.0;
 
     for(int i = 0; i < SYMBOL_LENGTH; i++) {
         out[i] = (int) roundf((DAC_MAX * ifft_out[i]) / max);
@@ -114,12 +116,12 @@ void initWindowTaper() {
 
 void dacInit() {
     char fname[64];
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < 20; i++) {
         sprintf(fname, "dacOutput%s%d.pwl", (i & 1) ? "Neg": "Pos", i >> 1);
         dacOut[i].open(fname);
         dacOut[i] << std::scientific << std::setprecision(6);
     }
-    for(int i = 0; i < 14; i++) {
+    for(int i = 0; i < 18; i++) {
         if(i & 1) {
             dacOut[i] << "0\t" << DAC_HI << std::endl;
         }
@@ -127,21 +129,23 @@ void dacInit() {
             dacOut[i] << "0\t" << DAC_LO << std::endl;
         }
     }
-    dacOut[14] << "0\t" << DAC_HI << std::endl;
-    dacOut[15] << "0\t" << DAC_LO << std::endl;
+    dacOut[18] << "0\t" << DAC_HI << std::endl;
+    dacOut[19] << "0\t" << DAC_LO << std::endl;
 
-    dacPrev = 128;
+    dacPrev = DAC_OFF;
 }
 
 void dacOutput(double time, int value) {
-    for(int i = 0; i < 8; i++) {
+    value += DAC_OFF;
+
+    for(int i = 0; i < 10; i++) {
         bool bit = (bool) ((dacPrev >> i) & 1);
 
         dacOut[(i << 1) + 0] << (time - DAC_SLEW) << "\t" << (bit ? DAC_HI : DAC_LO) << std::endl;
         dacOut[(i << 1) + 1] << (time - DAC_SLEW) << "\t" << (bit ? DAC_LO : DAC_HI) << std::endl;
     }
 
-    for(int i = 0; i < 8; i++) {
+    for(int i = 0; i < 10; i++) {
         bool bit = (bool) ((value >> i) & 1);
 
         dacOut[(i << 1) + 0] << time << "\t" << (bit ? DAC_HI : DAC_LO) << std::endl;

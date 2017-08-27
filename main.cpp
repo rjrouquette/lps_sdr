@@ -121,7 +121,7 @@ void dacInit() {
 
     dacOut[1].open("/tmp/dacOutputNeg.pwl");
     dacOut[1] << std::scientific << std::setprecision(6);
-    dacOut[0] << "0\t" << (DAC_COMP - DAC_OFF) * DAC_SCALE << std::endl;
+    dacOut[1] << "0\t" << (DAC_COMP - DAC_OFF) * DAC_SCALE << std::endl;
 
     dacPrev = DAC_OFF;
 }
